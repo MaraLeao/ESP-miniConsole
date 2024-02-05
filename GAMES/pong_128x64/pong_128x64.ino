@@ -1,23 +1,3 @@
-/**************************************************************************
- This is an example for our Monochrome OLEDs based on SSD1306 drivers
-
- Pick one up today in the adafruit shop!
- ------> http://www.adafruit.com/category/63_98
-
- This example is for a 128x64 pixel display using I2C to communicate
- 3 pins are required to interface (two I2C and one reset).
-
- Adafruit invests time and resources providing this open
- source code, please support Adafruit and open-source
- hardware by purchasing products from Adafruit!
-
- Written by Limor Fried/Ladyada for Adafruit Industries,
- with contributions from the open source community.
- BSD license, check license.txt for more information
- All text above, and the splash screen below must be
- included in any redistribution.
- **************************************************************************/
-
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -34,11 +14,6 @@
 #define IR_REMOTE_KEY_RIGHT 22
 #define IR_REMOTE_KEY_DOWN 25
 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-// The pins for I2C are defined by the Wire-library. 
-// On an arduino UNO:       A4(SDA), A5(SCL)
-// On an arduino MEGA 2560: 20(SDA), 21(SCL)
-// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -193,51 +168,8 @@ class menu {
         drawCentreString("GAME OVER", 64, 32);
         drawCentreString("Press OK", 64, 45);
       }
-      
-      /*switch(mode) {
-        case 0:
-          drawCentreString("PAUSE", 64, 32);
-          drawCentreString("Press any button for start", 64, 32);
-          break;
-        case 1:
-          drawCentreString("Press any button for start", 64, 32);
-          break;
-        case 2:
-          drawCentreString("GAME OVER", 64, 32);
-          drawCentreString("Press any button for start", 64, 32);
-          break;
-      }*/
     }
 };
-
-/*void ir_control_test(int command) {
-  switch (command) {
-    case IR_REMOTE_KEY_UP:
-      Serial.println("UP");
-      break;
-
-    case IR_REMOTE_KEY_DOWN:
-      Serial.println("DOWN");
-      break;
-
-    case IR_REMOTE_KEY_LEFT:
-      Serial.println("LEFT");
-      break;
-
-    case IR_REMOTE_KEY_RIGHT:
-      Serial.println("RIGHT");
-      break;
-
-    case IR_REMOTE_KEY_OK:
-      Serial.println("OK");
-      break;
-
-    default:
-      Serial.println("WARNING: undefined command:");
-      break;
-  }
-
-}*/
 
 void setup() {
   Serial.begin(9600);
