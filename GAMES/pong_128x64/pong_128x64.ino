@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DIYables_IRcontroller.h> // DIYables_IRcontroller library
+#include <time.h>
 
 #define IR_RECEIVER_PIN 12 // The Arduino pin connected to IR controller
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -23,7 +24,6 @@ const int l_button = 12;
 
 int r_state_btn = 1;
 int l_state_btn = 1;
-
 
 const int dirDOWN = 1;
 const int dirUP = -1;
@@ -75,8 +75,6 @@ class paddle {
     int y = 50;
     int width = 23;
     int height = 4;
-    int score = 0;
-    int max_score = 0;
 
     void reset() {
       x = 54;
@@ -95,10 +93,10 @@ class paddle {
       }
 
       if (command == IR_REMOTE_KEY_RIGHT) {
-        x += 20;
+        x += 25;
       }
       if (command == IR_REMOTE_KEY_LEFT) {
-        x -= 20;
+        x -= 25;
       }
   
       /*if (!r_state_btn) {
@@ -107,33 +105,32 @@ class paddle {
       if (!l_state_btn) {
         x -= 5; //move paddle for left
       }*/
+      display.drawRect(x, 50, 20, 4, SSD1306_WHITE);
     }
 
-      void collide(ball* ball_obj) {
-        //paddle collide up
-        if (ball_obj->y >= 47 && ball_obj->y <= (y + height)) {
-          if(ball_obj->x >= x && ball_obj->x <= (x + width)) {
-            ball_obj->dir_vertical = dirUP;
-          } 
-        }
-        //paddle collide left and right
-        if(ball_obj->y >= y && ball_obj->y <= (y + height)) {
-
-          if(ball_obj->x == (x - ball_obj->radius)) {
-            ball_obj->dir_horizontal = dirLEFT;
-            ball_obj->dir_vertical = dirUP;
-
-          } else if (ball_obj->x == (x + width)){
-            ball_obj->dir_horizontal = dirRIGHT;
-            ball_obj->dir_vertical = dirUP;
-          }
-
-        if (ball_obj->dir_vertical == dirUP && ball_obj->y > 45) {
-          score++;
-        }
-      }
+    bool collide(ball* ball_obj) {
+      bool col_check = false;
       
-      display.drawRect(x, 50, 20, 4, SSD1306_WHITE);
+      if (ball_obj->y >= 47 && ball_obj->y <= (y + height)) {
+        
+
+        //paddle collide left and right
+        if(ball_obj->x == (x - ball_obj->radius)) {
+          ball_obj->dir_horizontal = dirLEFT;
+          ball_obj->dir_vertical = dirUP;
+          col_check = true;
+
+        } else if (ball_obj->x == (x + width)){
+          ball_obj->dir_horizontal = dirRIGHT;
+          ball_obj->dir_vertical = dirUP;
+          col_check = true;
+        } else if(ball_obj->x >= x && ball_obj->x <= (x + width)) {//paddle collide up
+          ball_obj->dir_vertical = dirUP;
+          col_check = true;
+        } 
+      }
+       
+      return col_check;
     }
 };
 
@@ -192,10 +189,14 @@ void setup() {
   paddle_obj.reset();
 }
 
+int score = 0;
+int max_score = 0;
 
 menu MENU;
 paddle paddle_obj;
 ball ball_obj;
+
+clock_t timeCollide = 0;
 
 void loop() {
   int command = irController.getKey();
@@ -206,12 +207,17 @@ void loop() {
   if (mode == menu::start_init) {
     if (command == IR_REMOTE_KEY_OK) {
       mode = menu::in_game;
+      score = 0;
     }
   } else if (mode == menu::in_game) {
     display.clearDisplay();
     ball_obj.move();
     paddle_obj.move(command);
-    paddle_obj.collide(&ball_obj);
+
+    if (paddle_obj.collide(&ball_obj) && timeCollide < clock()) {
+      timeCollide = clock() + 500;
+      score++;
+    }
 
     if(ball_obj.y >= 64) {
       mode = menu::game_over;
@@ -220,7 +226,7 @@ void loop() {
     if (command == IR_REMOTE_KEY_OK) {
       mode = menu::pause;
     }
-    drawCentreString(String(paddle_obj.score).c_str(), 100, 5);
+    drawCentreString(String(score).c_str(), 100, 5);
 
     display.display(); 
 
@@ -231,6 +237,7 @@ void loop() {
       if (mode == menu::game_over) {
         ball_obj.reset();
         paddle_obj.reset();
+        score = 0;
       }
       mode = menu::in_game;
     }
