@@ -31,26 +31,32 @@ const int dirUP = -1;
 const int dirRIGHT = 1;
 const int dirLEFT = -1;
 
+int score = 0;
+int best_score = 0;
+clock_t timeCollide = 0;
+
 class ball {
   public:
     int radius = 3;
     int w = 3;
     int h = 3;
-    int x = 64;
-    int y = 45;
+    float x = 64;
+    float y = 45;
     int init_speed = 2;
-    int dir_vertical = dirDOWN;
+    int dir_vertical = dirUP;
     int dir_horizontal = dirLEFT;
+    float speed = init_speed;
 
     void reset() {
       x = 64;
       y = 45;
+      speed = init_speed;
     }
 
     void move() {
-      display.drawCircle(x, y, radius, SSD1306_WHITE);
-
-      int speed = init_speed;
+      if (score >= 3) {
+        speed += 0.001;
+      }
       
       if (x >= (SCREEN_WIDTH - radius)) {
         dir_horizontal = dirLEFT;
@@ -64,6 +70,10 @@ class ball {
 
       x += (dir_horizontal * speed);
       y += (dir_vertical * speed);
+    }
+
+    void draw() {
+      display.drawCircle(x, y, radius, SSD1306_WHITE);
     }
 };
 
@@ -105,32 +115,29 @@ class paddle {
       if (!l_state_btn) {
         x -= 5; //move paddle for left
       }*/
+    }
+
+    void draw () {
       display.drawRect(x, 50, 20, 4, SSD1306_WHITE);
     }
 
-    bool collide(ball* ball_obj) {
-      bool col_check = false;
-      
-      if (ball_obj->y >= 47 && ball_obj->y <= (y + height)) {
-        
-
+    bool collide(ball& ball_obj) {
+      if (ball_obj.y >= 47 && ball_obj.y <= (y + height)) {
         //paddle collide left and right
-        if(ball_obj->x == (x - ball_obj->radius)) {
-          ball_obj->dir_horizontal = dirLEFT;
-          ball_obj->dir_vertical = dirUP;
-          col_check = true;
-
-        } else if (ball_obj->x == (x + width)){
-          ball_obj->dir_horizontal = dirRIGHT;
-          ball_obj->dir_vertical = dirUP;
-          col_check = true;
-        } else if(ball_obj->x >= x && ball_obj->x <= (x + width)) {//paddle collide up
-          ball_obj->dir_vertical = dirUP;
-          col_check = true;
+        if(ball_obj.x == (x - ball_obj.radius)) {
+          ball_obj.dir_horizontal = dirLEFT;
+          ball_obj.dir_vertical = dirUP;
+          return true;
+        } else if (ball_obj.x == (x + width)){
+          ball_obj.dir_horizontal = dirRIGHT;
+          ball_obj.dir_vertical = dirUP;
+          return true;
+        } else if(ball_obj.x >= x && ball_obj.x <= (x + width)) {//paddle collide up
+          ball_obj.dir_vertical = dirUP;
+          return true;
         } 
       }
-       
-      return col_check;
+      return false;
     }
 };
 
@@ -153,17 +160,24 @@ class menu {
     static const int start_init = 1;
     static const int game_over = 2;
     static const int in_game = 3;
+    static const int new_record = 4;
 
     void status(int mode) {
 
-      if(mode == 0) {
-        drawCentreString("PAUSE", 64, 32);
-        drawCentreString("Press OK", 64, 45);
-      } else if (mode == 1) {
-        drawCentreString("Press OK", 64, 32);
-      } else {
-        drawCentreString("GAME OVER", 64, 32);
-        drawCentreString("Press OK", 64, 45);
+      switch (mode) {
+        case menu::pause:
+          drawCentreString("PAUSE", 64, 32);
+          break;
+        case menu::start_init:
+          drawCentreString("PRESS OK", 64, 32);
+          break;
+        case menu::game_over:
+          drawCentreString("GAME OVER", 64, 32);
+          break;
+        case menu::new_record:
+          drawCentreString("NEW RECORD", 64, 25);
+          drawCentreString(String(best_score).c_str(), 64, 40);
+          break;
       }
     }
 };
@@ -180,69 +194,93 @@ void setup() {
 
   //pinMode(r_button, INPUT);
   //pinMode(l_button, INPUT);
-  
-  paddle paddle_obj;
-  ball ball_obj;
-
   display.clearDisplay();
-  ball_obj.reset();
-  paddle_obj.reset();
+  display.display();
 }
-
-int score = 0;
-int max_score = 0;
 
 menu MENU;
 paddle paddle_obj;
 ball ball_obj;
 
-clock_t timeCollide = 0;
+int old_command = NULL;
+int command = NULL;
 
 void loop() {
-  int command = irController.getKey();
+  old_command = command;
+  command = irController.getKey();
+  display.clearDisplay();
 
   //r_state_btn = digitalRead(r_button);
   //l_state_btn = digitalRead(l_button);
 
-  if (mode == menu::start_init) {
-    if (command == IR_REMOTE_KEY_OK) {
-      mode = menu::in_game;
-      score = 0;
-    }
-  } else if (mode == menu::in_game) {
-    display.clearDisplay();
-    ball_obj.move();
-    paddle_obj.move(command);
+  switch (mode) {
+    case menu::start_init:
+      MENU.status(mode);
 
-    if (paddle_obj.collide(&ball_obj) && timeCollide < clock()) {
-      timeCollide = clock() + 500;
-      score++;
-    }
-
-    if(ball_obj.y >= 64) {
-      mode = menu::game_over;
-    }
-
-    if (command == IR_REMOTE_KEY_OK) {
-      mode = menu::pause;
-    }
-    drawCentreString(String(score).c_str(), 100, 5);
-
-    display.display(); 
-
-  } else {
-    display.clearDisplay();
-    MENU.status(mode);
-    if (command == IR_REMOTE_KEY_OK) {
-      if (mode == menu::game_over) {
+      if (command == IR_REMOTE_KEY_OK && old_command != IR_REMOTE_KEY_OK) {
         ball_obj.reset();
         paddle_obj.reset();
+        ball_obj.dir_vertical = dirUP;
         score = 0;
+        mode = menu::in_game;
       }
-      mode = menu::in_game;
-    }
-    display.display();  
+      break;
+
+    case menu::in_game:
+      ball_obj.move();
+      ball_obj.draw();
+      paddle_obj.move(command);
+      paddle_obj.draw();
+      drawCentreString(String(score).c_str(), 100, 5);
+
+      if (paddle_obj.collide(ball_obj) && timeCollide < clock()) {
+        timeCollide = clock() + 500;
+        score++;
+      }
+
+      if(ball_obj.y >= 64) {
+        mode = menu::game_over;
+      }
+
+      if (command == IR_REMOTE_KEY_OK && old_command != IR_REMOTE_KEY_OK) {
+        mode = menu::pause;
+      }
+      break;
+
+    case menu::pause:
+      MENU.status(mode);
+      paddle_obj.draw();
+      ball_obj.draw();
+      drawCentreString(String(score).c_str(), 100, 5);
+
+      if (command == IR_REMOTE_KEY_OK && old_command != IR_REMOTE_KEY_OK) {      
+        mode = menu::in_game;
+      }
+      break;
+
+    case menu::game_over:
+      MENU.status(mode);
+
+      if (command == IR_REMOTE_KEY_OK && old_command != IR_REMOTE_KEY_OK) {
+
+        if (score > best_score) {
+          best_score = score;
+          mode = menu::new_record;
+          break;
+        }
+
+        mode = menu::start_init;
+      }
+      break;
+    
+    case menu::new_record:
+      MENU.status(mode);
+      if (command == IR_REMOTE_KEY_OK && old_command != IR_REMOTE_KEY_OK) {      
+        mode = menu::start_init;
+      }
   }
+
+  display.display();  
 }
 
 
