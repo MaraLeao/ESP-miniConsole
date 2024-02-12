@@ -141,8 +141,7 @@ class paddle {
     }
 };
 
-void drawCentreString(const char *buf, int x, int y)
-{
+void drawCentreString(const char *buf, int x, int y) {
   int16_t x1, y1;
   uint16_t w, h;
   display.setTextSize(1);      // Normal 1:1 pixel scale
